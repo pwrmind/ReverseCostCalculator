@@ -1,5 +1,402 @@
-<div v-if="cost !== null && !error" class="text-center py-6 pulse-result">
-    <div class="text-3xl md:text-4xl font-bold text-indigo-700 mb-4">
-        {{ formattedCost }} руб
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Обратный калькулятор себестоимости</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Vue.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+    <style>
+        .fade-enter-active, .fade-leave-active {
+            transition: opacity 0.3s;
+        }
+        .fade-enter, .fade-leave-to {
+            opacity: 0;
+        }
+        .slide-fade-enter-active {
+            transition: all 0.3s ease;
+        }
+        .slide-fade-leave-active {
+            transition: all 0.3s cubic-bezier(1.0, 0.5, 0.8, 1.0);
+        }
+        .slide-fade-enter, .slide-fade-leave-to {
+            transform: translateY(-10px);
+            opacity: 0;
+        }
+        .history-item-enter-active, .history-item-leave-active {
+            transition: all 0.4s;
+        }
+        .history-item-enter, .history-item-leave-to {
+            opacity: 0;
+            transform: translateX(30px);
+        }
+        .pulse-result {
+            animation: pulse 0.5s;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <div id="app" class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Заголовок приложения -->
+        <header class="text-center mb-12">
+            <h1 class="text-3xl md:text-4xl font-bold text-indigo-800 mb-3">
+                <i class="fas fa-calculator mr-3"></i>Обратный калькулятор себестоимости
+            </h1>
+        </header>
+
+        <!-- Основной контент -->
+        <div class="flex flex-col gap-8">
+            <!-- Результаты -->
+            <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                <h2 class="text-xl font-semibold text-gray-800 mb-6">
+                    <i class="fas fa-chart-line mr-2 text-indigo-600"></i>Результат расчета
+                </h2>
+                
+                <!-- Сообщение об ошибке -->
+                <transition name="fade">
+                    <div v-if="error" class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="fas fa-exclamation-circle text-red-500 text-xl"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-red-700">{{ error }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </transition>
+                
+                <!-- Результат расчета -->
+                <transition name="slide-fade">
+                    <div v-if="cost !== null && !error" class="text-center py-6 pulse-result">
+                        <div class="text-3xl md:text-4xl font-bold text-indigo-700 mb-4">
+                            {{ formattedCost }} руб
+                        </div>
+                    </div>
+                </transition>
+                
+                <!-- График -->
+                <div v-if="cost !== null && !error" class="mt-8">
+                    <h3 class="text-lg font-medium text-gray-800 mb-4 text-center">
+                        Распределение стоимости
+                    </h3>
+                    <div class="w-full bg-gray-200 rounded-full h-4 mb-4">
+                        <div 
+                            class="bg-indigo-600 h-4 rounded-full" 
+                            :style="{ width: margin + '%' }"
+                        ></div>
+                    </div>
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <div>Маржа<br>{{ margin }}% ({{ formattedMarginValue }} руб)</div>
+                        <div>Себестоимость<br>{{ formattedCost }} руб</div>
+                    </div>
+                </div>
+                
+                <!-- Инструкция, если результат не рассчитан -->
+                <div v-if="cost === null && !error" class="text-center py-10 text-gray-500">
+                    <i class="fas fa-calculator text-4xl mb-4 text-indigo-300"></i>
+                    <p>Введите цену и маржу, затем нажмите "Рассчитать"</p>
+                </div>
+            </div>
+            
+            <!-- Форма ввода -->
+            <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                <h2 class="text-xl font-semibold text-gray-800 mb-6">
+                    <i class="fas fa-edit mr-2 text-indigo-600"></i>Введите данные
+                </h2>
+                
+                <div class="space-y-5">
+                    <!-- Поле для цены -->
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-medium">
+                            Цена товара (руб)
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-tag text-gray-400"></i>
+                            </div>
+                            <input 
+                                v-model="price" 
+                                type="number" 
+                                min="0" 
+                                step="0.01" 
+                                placeholder="Введите цену товара" 
+                                class="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                @keyup.enter="calculateCost"
+                            >
+                        </div>
+                    </div>
+                    
+                    <!-- Поле для маржи -->
+                    <div>
+                        <label class="block text-gray-700 mb-2 font-medium">
+                            Желаемая маржа (%)
+                        </label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-percent text-gray-400"></i>
+                            </div>
+                            <input 
+                                v-model="margin" 
+                                type="number" 
+                                min="0" 
+                                max="100" 
+                                step="0.1" 
+                                placeholder="Введите желаемую маржу" 
+                                class="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                                @keyup.enter="calculateCost"
+                            >
+                        </div>
+                    </div>
+                    
+                    <!-- Кнопка расчета -->
+                    <button 
+                        @click="calculateCost"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 transform hover:scale-[1.02] mt-4"
+                    >
+                        <i class="fas fa-calculator mr-2"></i>Рассчитать себестоимость
+                    </button>
+                </div>
+            </div>
+            
+            <!-- История расчетов -->
+            <div class="bg-white rounded-xl shadow-lg p-6 md:p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-history mr-2 text-indigo-600"></i>История расчетов
+                    </h2>
+                    <button 
+                        @click="confirmClearHistory"
+                        class="text-red-500 hover:text-red-700"
+                        v-if="history.length > 0"
+                    >
+                        <i class="fas fa-trash-alt mr-1"></i> Очистить
+                    </button>
+                </div>
+                
+                <div v-if="history.length === 0" class="text-center py-6 text-gray-500">
+                    <i class="fas fa-clock text-3xl mb-3 text-indigo-300"></i>
+                    <p>Здесь будет сохраняться история ваших расчетов</p>
+                </div>
+                
+                <transition-group name="history-item" tag="div" class="space-y-4">
+                    <div 
+                        v-for="(item, index) in history" 
+                        :key="item.timestamp"
+                        class="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition"
+                    >
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="font-medium text-gray-800">
+                                    {{ formatCurrency(item.cost) }} руб
+                                </div>
+                                <div class="text-sm text-gray-500 mt-1">
+                                    Цена: {{ formatCurrency(item.price) }} руб · Маржа: {{ item.margin }}%
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-gray-400 mb-1">
+                                    {{ formatDate(item.timestamp) }}
+                                </div>
+                                <button 
+                                    @click="deleteHistoryItem(index)"
+                                    class="text-gray-400 hover:text-red-500"
+                                >
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </transition-group>
+            </div>
+        </div>
+        
+        <!-- Футер -->
+        <footer class="mt-16 text-center text-gray-500 text-sm">
+            <p>Обратный калькулятор себестоимости · {{ new Date().getFullYear() }}</p>
+        </footer>
+
+        <!-- Модальное окно подтверждения очистки -->
+        <transition name="fade">
+            <div v-if="showClearConfirmation" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div class="bg-white rounded-xl p-6 max-w-md w-full">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">
+                        <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>
+                        Подтверждение
+                    </h3>
+                    <p class="text-gray-600 mb-6">
+                        Вы уверены, что хотите полностью очистить историю расчетов? Это действие нельзя отменить.
+                    </p>
+                    <div class="flex justify-end space-x-3">
+                        <button 
+                            @click="showClearConfirmation = false"
+                            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100"
+                        >
+                            Отмена
+                        </button>
+                        <button 
+                            @click="clearHistory"
+                            class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                        >
+                            <i class="fas fa-trash mr-2"></i> Очистить
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </transition>
     </div>
-</div>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                price: '',
+                margin: '',
+                cost: null,
+                error: '',
+                history: [],
+                showClearConfirmation: false,
+                lastCalculation: null
+            },
+            computed: {
+                formattedCost() {
+                    if (this.cost === null) return '0.00';
+                    return this.formatCurrency(this.cost);
+                },
+                formattedMarginValue() {
+                    if (this.cost === null) return '0.00';
+                    const marginValue = parseFloat(this.price) - this.cost;
+                    return this.formatCurrency(marginValue);
+                }
+            },
+            mounted() {
+                this.loadHistory();
+            },
+            methods: {
+                calculateCost() {
+                    this.cost = null;
+                    this.error = '';
+                    
+                    if (!this.price || !this.margin) {
+                        this.error = 'Пожалуйста, заполните оба поля';
+                        return;
+                    }
+                    
+                    const price = parseFloat(this.price);
+                    const margin = parseFloat(this.margin);
+                    
+                    if (price <= 0 || margin <= 0) {
+                        this.error = 'Цена и маржа должны быть положительными числами';
+                        return;
+                    }
+                    
+                    if (margin >= 100) {
+                        this.error = 'Маржа не может быть 100% или больше';
+                        return;
+                    }
+                    
+                    // Расчет себестоимости
+                    this.cost = price / (1 + (margin / 100));
+                    
+                    // Сохраняем данные для истории
+                    this.lastCalculation = {
+                        price: price,
+                        margin: margin,
+                        cost: this.cost
+                    };
+                    
+                    // Автоматическое сохранение в историю
+                    this.saveToHistory();
+                },
+                
+                saveToHistory() {
+                    if (this.cost === null || !this.lastCalculation) return;
+                    
+                    // Удаляем предыдущую запись с такими же параметрами
+                    const existingIndex = this.history.findIndex(item => 
+                        Math.abs(item.price - this.lastCalculation.price) < 0.01 &&
+                        Math.abs(item.margin - this.lastCalculation.margin) < 0.01
+                    );
+                    
+                    if (existingIndex !== -1) {
+                        this.history.splice(existingIndex, 1);
+                    }
+                    
+                    // Добавляем новый расчет в начало истории
+                    this.history.unshift({
+                        price: this.lastCalculation.price,
+                        margin: this.lastCalculation.margin,
+                        cost: this.cost,
+                        timestamp: new Date().getTime()
+                    });
+                    
+                    // Ограничиваем историю 10 записями
+                    if (this.history.length > 10) {
+                        this.history = this.history.slice(0, 10);
+                    }
+                    
+                    // Сохраняем историю
+                    this.saveHistory();
+                },
+                
+                deleteHistoryItem(index) {
+                    this.history.splice(index, 1);
+                    this.saveHistory();
+                },
+                
+                confirmClearHistory() {
+                    this.showClearConfirmation = true;
+                },
+                
+                clearHistory() {
+                    this.history = [];
+                    this.saveHistory();
+                    this.showClearConfirmation = false;
+                },
+                
+                formatCurrency(value) {
+                    // Форматирование с разделителями тысяч
+                    return value.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$& ').replace('.', ',');
+                },
+                
+                formatDate(timestamp) {
+                    const date = new Date(timestamp);
+                    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + 
+                           ', ' + 
+                           date.toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' });
+                },
+                
+                saveHistory() {
+                    localStorage.setItem('costHistory', JSON.stringify(this.history));
+                },
+                
+                loadHistory() {
+                    const savedHistory = localStorage.getItem('costHistory');
+                    if (savedHistory) {
+                        try {
+                            this.history = JSON.parse(savedHistory);
+                            
+                            // Убедимся, что история - это массив
+                            if (!Array.isArray(this.history)) {
+                                this.history = [];
+                            }
+                        } catch (e) {
+                            console.error('Ошибка загрузки истории:', e);
+                            this.history = [];
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
