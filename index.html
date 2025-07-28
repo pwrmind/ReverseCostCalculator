@@ -104,7 +104,7 @@
                             <!-- Поле для цены -->
                             <div>
                                 <label class="block text-gray-700 mb-2 font-medium">
-                                    Цена товара (руб)
+                                    Цена товара (₽)
                                 </label>
                                 <div class="relative">
                                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -184,7 +184,7 @@
                         <transition name="slide-fade">
                             <div v-if="cost !== null && !error" class="text-center py-4 pulse-result">
                                 <div class="text-3xl md:text-4xl font-bold text-indigo-700 mb-4">
-                                    {{ formattedCost }} руб
+                                    {{ formattedCost }} ₽
                                 </div>
                             </div>
                         </transition>
@@ -201,8 +201,8 @@
                                 ></div>
                             </div>
                             <div class="flex justify-between text-sm text-gray-600">
-                                <div>Маржа<br>{{ margin }}% ({{ formattedMarginValue }} руб)</div>
-                                <div>Себестоимость<br>{{ formattedCost }} руб</div>
+                                <div>Маржа<br>{{ margin }}% ({{ formattedMarginValue }} ₽)</div>
+                                <div>Себестоимость<br>{{ formattedCost }} ₽</div>
                             </div>
                         </div>
                         
